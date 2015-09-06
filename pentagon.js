@@ -86,3 +86,26 @@ function angle(a,b,c) {
     return ang;
 }
 var deg = Math.PI/180
+var rad = 1/deg
+
+function midpt(a, b) { return a.plus(b).mul(0.5); }
+function transl(v) { return "translate(" + v.x + "," + v.y + ")" }
+function rotate(ang) { return "rotate(" + ang*rad + ")"; }
+function rot180(pt) { return transl(pt) + "scale(-1,-1)" + transl(pt.mul(-1)); }
+function glide(pt1, img1, pt2, img2) {
+    var a1 = midpt(pt1, img1);
+    var a2 = midpt(pt2, img2);
+    var axis = a1.join(a2);
+    var v = img1.minus(axis.perp(pt1).meet(axis).mul(2).minus(pt1));
+    return transl(a1)
+         + rotate(a2.minus(a1).angle())
+         + "scale(1,-1)"
+         + rotate(-a2.minus(a1).angle())
+         + transl(a1.mul(-1))
+         + transl(v);
+}
+function pointsAttr(pts) {
+    return pts.map(function (pt) { return pt.x + "," + pt.y; }).join(" ");
+}
+
+function clip(lo, hi, x) { return Math.max(lo, Math.min(x, hi)); }

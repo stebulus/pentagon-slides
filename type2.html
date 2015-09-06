@@ -15,30 +15,10 @@
 <script type='text/javascript' src='d3.js' charset='utf-8'></script>
 <script type='text/javascript' src='pentagon.js' charset='utf-8'></script>
 <script type='text/javascript'>
-    function midpt(a, b) { return a.plus(b).mul(0.5); }
-    function transl(v) { return "translate(" + v.x + "," + v.y + ")" }
-    function rotate(ang) { return "rotate(" + ang*180/Math.PI + ")"; }
-    function rot180(pt) { return transl(pt) + "scale(-1,-1)" + transl(pt.mul(-1)); }
-    function glide(pt1, img1, pt2, img2) {
-        var a1 = midpt(pt1, img1);
-        var a2 = midpt(pt2, img2);
-        var axis = a1.join(a2);
-        var v = img1.minus(axis.perp(pt1).meet(axis).mul(2).minus(pt1));
-        return transl(a1)
-             + rotate(a2.minus(a1).angle())
-             + "scale(1,-1)"
-             + rotate(-a2.minus(a1).angle())
-             + transl(a1.mul(-1))
-             + transl(v);
-    }
-    function pointsAttr(pts) {
-        return pts.map(function (pt) { return pt.x + "," + pt.y; }).join(" ");
-    }
     var svg = d3.select("svg");
     var width = svg.attr("width");
     var height = svg.attr("height");
     var dotradius = 5;
-    function clip(lo, hi, x) { return Math.max(lo, Math.min(x, hi)); }
 
     var p = { f: new point(410, 280)
             , e: new point(365, 335)
