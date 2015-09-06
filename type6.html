@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html xmlns:xlink="http://www.w3.org/1999/xlink">
+<head>
+<meta charset='utf-8'>
+<link type="text/css" href="style.css" rel="stylesheet" />
+</head>
+<body>
+<h1>Type 6</h1>
+<svg width="800" height="800">
+    <g id="under" />
+    <g id="main-pentagon"><polygon id="pentagon" /></g>
+    <g id="over" />
+</svg>
+<p>Tiling (29) in Schattschneider&nbsp;1978.</p>
+<script type='text/javascript' src='d3.js' charset='utf-8'></script>
+<script type='text/javascript' src='pentagon.js' charset='utf-8'></script>
+<script type='text/javascript'>
+    var svg = d3.select("svg");
+    var width = svg.attr("width");
+    var height = svg.attr("height");
+    var dotradius = 5;
+
+    var p = { e: new point(380, 245)
+            , b: new point(420, 290)
+            , ds: 50
+            };
+    var pentagon;
+    var symms = {};
+    var fullsymms = [ [ "rc" ]
+                    , [ "rbc" ]
+                    , [ "rbc", "rc" ]
+                    , [ "rbc", "rea" ]
+                    , [ "rbc", "rea", "rc" ]
+                    , [ "rbc", "rea", "re" ]
+                    , [ "rbc", "rea", "re", "rcn" ]
+                    , [ "rea" ]
+                    , [ "rea", "rc" ]
+                    , [ "rea", "rc", "ren" ]
+                    , [ "rea", "rc", "ren", "rc" ]
+                    , [ "rea", "rbc" ]
+                    , [ "rea", "rbc", "rc" ]
+                    , [ "re" ]
+                    , [ "re", "rcn" ]
+                    ];
+
+    function update() {
+        var d = p.e.plus(p.e.minus(p.b).unit().mul(-p.ds).rot90());
+        var a1 = new circle(p.e.x, p.e.y, p.e.minus(d).norm());
+        var a2 = new circle(p.b.x, p.b.y, a1.r);
+        var a = a1.meetcircle(a2)[1];
+        var m = midpt(p.b, d);
+        var c = m.plus(d.minus(m).rot90().mul(Math.tan(angle(a,p.e,d)/2)));
+        pentagon = [a, p.b, c, d, p.e];
+        symms.rc = "rotate(" + angle(p.b,c,d)*rad + "," + c.x + "," + c.y + ")";
+        symms.rcn = "rotate(" + -angle(p.b,c,d)*rad + "," + c.x + "," + c.y + ")";
+        var mbc = midpt(p.b, c);
+        symms.rbc = "rotate(180," + mbc.x + "," + mbc.y + ")";
+        var mea = midpt(p.e, a);
+        symms.rea = "rotate(180," + mea.x + "," + mea.y + ")";
+        var med = midpt(p.e, d);
+        symms.re = "rotate(" + angle(a,p.e,d)*rad + "," + p.e.x + "," + p.e.y + ")";
+        symms.ren = "rotate(" + -angle(a,p.e,d)*rad + "," + p.e.x + "," + p.e.y + ")";
+    }
+    function movept(i, x, y) {
+        var newpt = new point( clip(dotradius, width-dotradius, x)
+                             , clip(dotradius, height-dotradius, y)
+                             );
+        switch (i) {
+            case 0:
+                var neweb = newpt.minus(p.e);
+                var limit = 2*pentagon[0].minus(p.e).norm();
+                if (neweb.norm() > limit)
+                    neweb = neweb.unit().mul(limit);
+                p.b = p.e.plus(neweb);
+                break;
+            case 1:
+                var newds = newpt.minus(p.e).norm();
+                p.ds = Math.max(newds, p.b.minus(p.e).norm()/2);
+                p.b = p.e.plus(p.e.minus(newpt).rot90().unit().mul(p.b.minus(p.e).norm()));
+                break;
+            case 2:
+                var newbe = newpt.minus(p.b);
+                var limit = 2*pentagon[0].minus(p.e).norm();
+                if (newbe.norm() > limit)
+                    newbe = newbe.unit().mul(limit);
+                p.e = p.b.plus(newbe);
+                break;
+        }
+    }
+
+    var dragger = d3.behavior.drag()
+                    .origin(function (d) { return d; })
+                    .on("dragstart",
+                        function() {
+                            d3.event.sourceEvent.stopPropagation();
+                        })
+                    .on("drag", function (d,i) {
+                        movept(i, d3.event.x, d3.event.y);
+                        draw();
+                    });
+    function draw() {
+        update();
+
+        var g = svg.select("#under")
+                   .selectAll(".image")
+                   .data(fullsymms);
+        g.enter()
+         .append("g")
+         .classed("image", true)
+         .append("use")
+         .attr("xlink:href", "#pentagon");
+        g.attr("transform", function (d) {
+            return d.map(function (x) { return symms[x]; }).join("");
+        });
+
+/*
+        var rails = svg.select("#under")
+                       .selectAll("circle.rail")
+                       .data([circ]);
+        rails.enter().append("circle").classed("rail", true);
+        rails.attr("cx", function (d) { return d.x; })
+             .attr("cy", function (d) { return d.y; })
+             .attr("r", function (d) { return d.r; });
+        rails = svg.select("#under")
+                   .selectAll("polyline.rail")
+                   .data([[ pentagon[1]
+                          , p.f
+                          , pentagon[0]
+                          , pentagon[3].plus(pentagon[0]).minus(pentagon[4])
+                          , pentagon[3]
+                          ]]);
+        rails.enter().append("polyline").classed("rail", true);
+        rails.attr("points", pointsAttr);
+        rails = svg.select("#under")
+                   .selectAll("path.rail")
+                   .data([[ pentagon[3].plus(pentagon[0]).minus(pentagon[4])
+                          , pentagon[3]
+                          , pentagon[2]
+                          ]]);
+        rails.enter().append("path").classed("rail", true);
+        rails.attr("d", function (d) {
+            var r = d[1].minus(d[0]).norm();
+            var direction;
+            if (angle(d[0], d[1], d[2]) > 0)
+                direction = 1;
+            else
+                direction = 0;
+            return ["M", d[0].x, d[0].y,
+                    "A", r, r, 0, 0, direction, d[2].x, d[2].y
+                   ].join(" ");
+        });
+        */
+
+        var path = svg.selectAll("#pentagon")
+                      .data([pentagon])
+                      .attr("points", pointsAttr);
+
+        var dots = svg.select("#over").selectAll(".dot")
+                      .data([pentagon[1], pentagon[3], pentagon[4]]);
+        dots.enter()
+            .append("circle")
+            .attr("r", 5)
+            .classed("dot", true)
+            .call(dragger);
+        dots.attr("cx", function(d) { return d.x; })
+            .attr("cy", function(d) { return d.y; });
+    }
+    draw();
+</script>
+</body>
+</html>
