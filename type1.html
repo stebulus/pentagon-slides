@@ -13,12 +13,11 @@
 </svg>
 <p>Tiling (24) in Schattschneider&nbsp;1978.</p>
 <script type='text/javascript' src='d3.js' charset='utf-8'></script>
+<script type='text/javascript' src='pentagon.js' charset='utf-8'></script>
 <script type='text/javascript'>
-    function midpt(a, b) { return { x: (a.x+b.x)/2, y: (a.y+b.y)/2 }; }
-    function minus(a, b) { return { x: a.x-b.x, y: a.y-b.y }; }
-    function neg(a) { return { x: -a.x, y: -a.y }; }
+    function midpt(a, b) { return a.plus(b).mul(0.5); }
     function transl(v) { return "translate(" + (-v.x) + "," + (-v.y) + ")" }
-    function rot180(pt) { return transl(neg(pt)) + "scale(-1,-1)" + transl(pt); }
+    function rot180(pt) { return transl(pt.mul(-1)) + "scale(-1,-1)" + transl(pt); }
     var svg = d3.select("svg");
     var width = svg.attr("width");
     var height = svg.attr("height");
@@ -46,14 +45,14 @@
                     ];
 
     function update() {
-        pentagon = [ { x: p.x[0], y: p.y1 }
-                   , { x: p.x[1], y: p.y1 }
-                   , { x: p.x[2], y: p.y2 }
-                   , { x: p.x[3], y: p.y2 }
-                   , { x: p.x[4], y: (1-p.t)*p.y1 + p.t*p.y2 }
+        pentagon = [ new point(p.x[0], p.y1)
+                   , new point(p.x[1], p.y1)
+                   , new point(p.x[2], p.y2)
+                   , new point(p.x[3], p.y2)
+                   , new point(p.x[4], (1-p.t)*p.y1 + p.t*p.y2)
                    ];
-        symms.t1 = transl(minus(pentagon[0], pentagon[3]));
-        symms.t1n = transl(neg(minus(pentagon[0], pentagon[3])));
+        symms.t1 = transl(pentagon[0].minus(pentagon[3]));
+        symms.t1n = transl(pentagon[3].minus(pentagon[0]));
         symms.r1 = rot180(midpt(pentagon[1], pentagon[2]));
         symms.r2 = rot180(midpt(pentagon[3], pentagon[4]));
     }
