@@ -65,7 +65,11 @@ function circle(x,y,r) {
         if (d == 0) return [];
         var xlen = (d + (this.r*this.r - that.r*that.r)/d)/2;
         var ylensq = this.r*this.r - xlen*xlen;
-        if (ylensq < 0) return [];
+        if (ylensq < 0) {
+            var t = this.r / (this.r + that.r);
+            var m = this.centre().mul(t).plus(that.centre().mul(1-t));
+            return [m, m];
+        }
         var ylen = Math.sqrt(ylensq);
         var xdir = odiff.unit();
         var ypart = xdir.rot90().mul(ylen);
