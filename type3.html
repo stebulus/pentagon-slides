@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html xmlns:xlink="http://www.w3.org/1999/xlink">
+<head>
+<meta charset='utf-8'>
+<link type="text/css" href="style.css" rel="stylesheet" />
+</head>
+<body>
+<h1>Type 3: cut-up hexagon</h1>
+<svg width="800" height="800">
+    <g id="under" />
+    <g id="main-pentagon"><polygon id="pentagon" /></g>
+    <g id="over" />
+</svg>
+<p>Tiling (22) in Schattschneider&nbsp;1978.</p>
+<script type='text/javascript' src='d3.js' charset='utf-8'></script>
+<script type='text/javascript' src='pentagon.js' charset='utf-8'></script>
+<script type='text/javascript'>
+    var svg = d3.select("svg");
+    var width = svg.attr("width");
+    var height = svg.attr("height");
+    var dotradius = 5;
+
+    var p = { e: new point(410, 180)
+            , b: new point(500, 280)
+            };
+    var pentagon;
+    var symms = {};
+    var fullsymms = [ [ "r" ]
+                    , [ "r", "r" ]
+                    , [ "t" ]
+                    , [ "t", "r" ]
+                    , [ "t", "r", "r" ]
+                    , [ "tn" ]
+                    , [ "tn", "r" ]
+                    , [ "tn", "r", "r" ]
+                    , [ "t2" ]
+                    , [ "t2", "r" ]
+                    , [ "t2", "r", "r" ]
+                    , [ "t2", "tn" ]
+                    , [ "t2", "tn", "r" ]
+                    , [ "t2", "tn", "r", "r" ]
+                    , [ "t2", "tn", "tn" ]
+                    , [ "t2", "tn", "tn", "r" ]
+                    , [ "t2", "tn", "tn", "r", "r" ]
+                    ];
+
+    function update() {
+        var be = midpt(p.b, p.e);
+        var f = p.e.join(p.e.plus(new point(1, -Math.sqrt(3))))
+                   .meet(p.b.join(p.b.plus(new point(1, 0))));
+        var s = (f.minus(p.e).norm() + f.minus(p.b).norm())/3;
+        var a = be.plus(p.b.minus(be).rot90().mul(1/Math.sqrt(3)))
+        pentagon = [ a
+                   , p.b
+                   , f.plus(p.b.minus(f).unit().mul(s))
+                   , f.plus(p.e.minus(f).unit().mul(s))
+                   , p.e
+                   ];
+        symms.r = "rotate(120," + a.x + "," + a.y + ")";
+        var v1 = pentagon[3].minus(a).plus(pentagon[3]).minus(pentagon[2]);
+        var v2 = pentagon[3].minus(a).plus(pentagon[2]).minus(a);
+        symms.t = transl(v1);
+        symms.tn = transl(v1.mul(-1));
+        symms.t2 = transl(v2);
+    }
+    function movept(i, x, y) {
+        var newpt = new point( clip(dotradius, width-dotradius, x)
+                             , clip(dotradius, height-dotradius, y)
+                             );
+        switch (i) {
+            case 0:
+                p.b = newpt;
+                break;
+            case 1:
+                p.e = newpt;
+                break;
+        }
+    }
+
+    var dragger = d3.behavior.drag()
+                    .origin(function (d) { return d; })
+                    .on("dragstart",
+                        function() {
+                            d3.event.sourceEvent.stopPropagation();
+                        })
+                    .on("drag", function (d,i) {
+                        movept(i, d3.event.x, d3.event.y);
+                        draw();
+                    });
+    function draw() {
+        update();
+
+        var g = svg.select("#under")
+                   .selectAll(".image")
+                   .data(fullsymms);
+        g.enter()
+         .append("g")
+         .classed("image", true)
+         .append("use")
+         .attr("xlink:href", "#pentagon");
+        g.attr("transform", function (d) {
+            return d.map(function (x) { return symms[x]; }).join("");
+        });
+
+/*
+        var rails = svg.select("#under")
+                       .selectAll("circle.rail")
+                       .data([circ]);
+        rails.enter().append("circle").classed("rail", true);
+        rails.attr("cx", function (d) { return d.x; })
+             .attr("cy", function (d) { return d.y; })
+             .attr("r", function (d) { return d.r; });
+        rails = svg.select("#under")
+                   .selectAll("polyline.rail")
+                   .data([[ pentagon[1]
+                          , p.f
+                          , pentagon[0]
+                          , pentagon[3].plus(pentagon[0]).minus(pentagon[4])
+                          , pentagon[3]
+                          ]]);
+        rails.enter().append("polyline").classed("rail", true);
+        rails.attr("points", pointsAttr);
+        rails = svg.select("#under")
+                   .selectAll("path.rail")
+                   .data([[ pentagon[3].plus(pentagon[0]).minus(pentagon[4])
+                          , pentagon[3]
+                          , pentagon[2]
+                          ]]);
+        rails.enter().append("path").classed("rail", true);
+        rails.attr("d", function (d) {
+            var r = d[1].minus(d[0]).norm();
+            var direction;
+            if (angle(d[0], d[1], d[2]) > 0)
+                direction = 1;
+            else
+                direction = 0;
+            return ["M", d[0].x, d[0].y,
+                    "A", r, r, 0, 0, direction, d[2].x, d[2].y
+                   ].join(" ");
+        });
+        */
+
+        var path = svg.selectAll("#pentagon")
+                      .data([pentagon])
+                      .attr("points", pointsAttr);
+
+        var dots = svg.select("#over").selectAll(".dot")
+                      .data([pentagon[1], pentagon[4]]);
+        dots.enter()
+            .append("circle")
+            .attr("r", 5)
+            .classed("dot", true)
+            .call(dragger);
+        dots.attr("cx", function(d) { return d.x; })
+            .attr("cy", function(d) { return d.y; });
+    }
+    draw();
+</script>
+</body>
+</html>
