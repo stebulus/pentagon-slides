@@ -1,0 +1,7 @@
+svg { background: white; }
+.dot { fill: black; }
+use { stroke: #0000bb; fill: #eeeeee; }
+#main-pentagon { stroke: black; fill: transparent; }
+polygon { stroke: inherit; fill: inherit; }
+.rail { stroke: #bbbbbb; fill: transparent; }
+h1 { font-family: sans; font-size: 120%; }
