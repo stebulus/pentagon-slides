@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html xmlns:xlink="http://www.w3.org/1999/xlink">
+<head>
+<meta charset='utf-8'>
+<style type="text/css">
+    svg { background: white; }
+    .dot { fill: black; }
+    use { stroke: #0000bb; fill: #eeeeee; }
+    #main-pentagon { stroke: black; fill: transparent; }
+    polygon { stroke: inherit; fill: inherit; }
+    .rail { stroke: #bbbbbb; fill: transparent; }
+    h1 { font-family: sans; font-size: 120%; }
+</style>
+</head>
+<body>
+<h1>Type 2: Truncated cyclic quadrilateral</h1>
+<svg width="800" height="800">
+    <g id="under" />
+    <g id="main-pentagon"><polygon id="pentagon" /></g>
+    <g id="over" />
+</svg>
+<p>Tiling (20) in Schattschneider&nbsp;1978.</p>
+<script type='text/javascript' src='d3.js' charset='utf-8'></script>
+<script type='text/javascript'>
+    function midpt(a, b) { return a.plus(b).mul(0.5); }
+    function transl(v) { return "translate(" + v.x + "," + v.y + ")" }
+    function rotate(ang) { return "rotate(" + ang*180/Math.PI + ")"; }
+    function rot180(pt) { return transl(pt) + "scale(-1,-1)" + transl(pt.mul(-1)); }
+    function glide(pt1, img1, pt2, img2) {
+        var a1 = midpt(pt1, img1);
+        var a2 = midpt(pt2, img2);
+        var axis = a1.join(a2);
+        var v = img1.minus(axis.perp(pt1).meet(axis).mul(2).minus(pt1));
+        return transl(a1)
+             + rotate(a2.minus(a1).angle())
+             + "scale(1,-1)"
+             + rotate(-a2.minus(a1).angle())
+             + transl(a1.mul(-1))
+             + transl(v);
+    }
+    function pointsAttr(pts) {
+        return pts.map(function (pt) { return pt.x + "," + pt.y; }).join(" ");
+    }
+    var svg = d3.select("svg");
+    var width = svg.attr("width");
+    var height = svg.attr("height");
+    var dotradius = 5;
+    function clip(lo, hi, x) { return Math.max(lo, Math.min(x, hi)); }
+    function point(x,y) {
+        this.x = x;
+        this.y = y;
+        this.plus = function(that) {
+            return new point(this.x+that.x, this.y+that.y);
+        }
+        this.minus = function(that) {
+            return new point(this.x-that.x, this.y-that.y);
+        }
+        this.neg = function () {
+            return new point(-this.x, -this.y);
+        }
+        this.mul = function (t) {
+            return new point(t*this.x, t*this.y);
+        }
+        this.norm = function () {
+            return Math.sqrt(this.x*this.x + this.y*this.y);
+        }
+        this.unit = function () {
+            return this.mul(1/this.norm());
+        }
+        this.join = function (that) {
+            return new line( -this.y + that.y
+                           , this.x - that.x
+                           , this.x*that.y - this.y*that.x
+                           );
+        }
+        this.rot90 = function () {
+            return new point(this.y, -this.x);
+        }
+        this.angle = function() {
+            return Math.atan2(this.y, this.x);
+        }
+    }
+    function line(a,b,c) {
+        this.a = a;
+        this.b = b;
+        this.c = c;
+        this.meet = function (that) {
+            var d = this.a*that.b - this.b*that.a
+            return new point( (this.c*that.b - this.b*that.c)/d
+                            , (this.a*that.c - this.c*that.a)/d
+                            );
+        }
+        this.perp = function (pt) {
+            return new line(-this.b, this.a, -this.b*pt.x+this.a*pt.y);
+        }
+    }
+    function perpbisect(a,b) {
+        return a.join(b).perp(midpt(a,b));
+    }
+    function circle(x,y,r) {
+        this.x = x;
+        this.y = y;
+        this.r = r;
+        this.centre = function() {
+            return new point(this.x, this.y);
+        }
+        this.polar = function(ang) {
+            return new point(this.x + this.r*Math.cos(ang), this.y + this.r*Math.sin(ang));
+        }
+        this.meetcircle = function(that) {
+            var odiff = that.centre().minus(this.centre());
+            var d = odiff.norm();
+            if (d == 0) return [];
+            var xlen = (d + (this.r*this.r - that.r*that.r)/d)/2;
+            var ylensq = this.r*this.r - xlen*xlen;
+            if (ylensq < 0) return [];
+            var ylen = Math.sqrt(ylensq);
+            var xdir = odiff.unit();
+            var ypart = xdir.rot90().mul(ylen);
+            var m = this.centre().plus(xdir.mul(xlen));
+            return [m.plus(ypart), m.minus(ypart)];
+        }
+    }
+    function circumcircle(a,b,c) {
+        var centre = perpbisect(a,b).meet(perpbisect(b,c));
+        return new circle(centre.x, centre.y, centre.minus(a).norm());
+    }
+    function angle(a,b,c) {
+        var ang = b.minus(c).angle() - b.minus(a).angle();
+        if (ang < -Math.PI)
+            ang += 2*Math.PI;
+        else if (ang > Math.PI)
+            ang -= 2*Math.PI;
+        return ang;
+    }
+    var deg = Math.PI/180
+
+    var p = { f: new point(410, 280)
+            , e: new point(365, 335)
+            , c: new point(310, 240)
+            , as: 30
+            , cs: 40
+            };
+    var circ;
+    var pentagon;
+    var symms = {};
+    var fullsymms = [ [ "g1" ]
+                    , [ "r1" ]
+                    , [ "g1", "g1" ]
+                    , [ "r1", "g1" ]
+                    , [ "r1", "g1n" ]
+                    , [ "r1", "g1n", "g1n" ]
+                    , [ "g1", "r1" ]
+                    , [ "g1", "r1", "g1" ]
+                    , [ "g1", "r1", "g1", "g1" ]
+                    , [ "g1", "r1", "g1n" ]
+                    , [ "g1", "r1", "g1n", "g1n" ]
+                    , [ "g1n" ]
+                    , [ "g1n", "g1n" ]
+                    ];
+
+    function update() {
+        circ = circumcircle(p.f, p.e, p.c);
+        var d = circ.meetcircle(new circle(p.c.x, p.c.y, p.as))[0];
+        pentagon = [ p.f.minus(p.e).unit().mul(p.as).plus(p.e)
+                   , p.f.minus(p.c).unit().mul(p.cs).plus(p.c)
+                   , p.c
+                   , d
+                   , p.e
+                   ];
+        symms.g1 = glide(pentagon[0], pentagon[3], pentagon[4], pentagon[2]);
+        symms.g1n = glide(pentagon[3], pentagon[0], pentagon[2], pentagon[4]);
+        symms.r1 = rot180(midpt(pentagon[0], pentagon[1]));
+    }
+    function movept(i, x, y) {
+        var newpt = new point( clip(dotradius, width-dotradius, x)
+                             , clip(dotradius, height-dotradius, y)
+                             );
+        switch (i) {
+            case 0:
+                p.as = newpt.minus(p.e).norm();
+                p.f = newpt.join(p.e).meet(p.c.join(pentagon[1]));
+                break;
+            case 1:
+                p.cs = newpt.minus(p.c).norm();
+                p.f = newpt.join(p.c).meet(p.e.join(pentagon[0]));
+                break;
+            case 2:
+                p.as = newpt.minus(pentagon[3]).norm();
+                p.c = newpt;
+                break;
+            case 3:
+                p.as = newpt.minus(p.c).norm();
+                var newcirc = circumcircle(newpt, p.e, p.c);
+                p.f = newcirc.polar(p.f.minus(circ.centre()).angle());
+                break;
+            case 4:
+                p.e = newpt;
+                break;
+        }
+    }
+
+    var dragger = d3.behavior.drag()
+                    .origin(function (d) { return d; })
+                    .on("dragstart",
+                        function() {
+                            d3.event.sourceEvent.stopPropagation();
+                        })
+                    .on("drag", function (d,i) {
+                        movept(i, d3.event.x, d3.event.y);
+                        draw();
+                    });
+    function draw() {
+        update();
+
+        var g = svg.select("#under")
+                   .selectAll(".image")
+                   .data(fullsymms);
+        g.enter()
+         .append("g")
+         .classed("image", true)
+         .append("use")
+         .attr("xlink:href", "#pentagon");
+        g.attr("transform", function (d) {
+            return d.map(function (x) { return symms[x]; }).join("");
+        });
+
+        var rails = svg.select("#under")
+                       .selectAll("circle.rail")
+                       .data([circ]);
+        rails.enter().append("circle").classed("rail", true);
+        rails.attr("cx", function (d) { return d.x; })
+             .attr("cy", function (d) { return d.y; })
+             .attr("r", function (d) { return d.r; });
+        rails = svg.select("#under")
+                   .selectAll("polyline.rail")
+                   .data([[ pentagon[1]
+                          , p.f
+                          , pentagon[0]
+                          , pentagon[3].plus(pentagon[0]).minus(pentagon[4])
+                          , pentagon[3]
+                          ]]);
+        rails.enter().append("polyline").classed("rail", true);
+        rails.attr("points", pointsAttr);
+        rails = svg.select("#under")
+                   .selectAll("path.rail")
+                   .data([[ pentagon[3].plus(pentagon[0]).minus(pentagon[4])
+                          , pentagon[3]
+                          , pentagon[2]
+                          ]]);
+        rails.enter().append("path").classed("rail", true);
+        rails.attr("d", function (d) {
+            var r = d[1].minus(d[0]).norm();
+            var direction;
+            if (angle(d[0], d[1], d[2]) > 0)
+                direction = 1;
+            else
+                direction = 0;
+            return ["M", d[0].x, d[0].y,
+                    "A", r, r, 0, 0, direction, d[2].x, d[2].y
+                   ].join(" ");
+        });
+
+        var path = svg.selectAll("#pentagon")
+                      .data([pentagon])
+                      .attr("points", pointsAttr);
+
+        var dots = svg.select("#over").selectAll(".dot")
+                      .data(pentagon);
+        dots.enter()
+            .append("circle")
+            .attr("r", 5)
+            .classed("dot", true)
+            .call(dragger);
+        dots.attr("cx", function(d) { return d.x; })
+            .attr("cy", function(d) { return d.y; });
+    }
+    draw();
+</script>
+</body>
+</html>
