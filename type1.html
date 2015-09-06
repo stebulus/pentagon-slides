@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html xmlns:xlink="http://www.w3.org/1999/xlink">
+<head>
+<meta charset='utf-8'>
+<style type="text/css">
+    svg { background: white; }
+    .dot { fill: black; }
+    use { stroke: #0000bb; fill: #eeeeee; }
+    #main-pentagon { stroke: black; fill: white; }
+    polygon { stroke: inherit; fill: inherit; }
+    .rail { stroke: #bbbbbb; }
+    h1 { font-family: sans; font-size: 120%; }
+</style>
+</head>
+<body>
+<h1>Type 1: Two parallel sides</h1>
+<svg width="800" height="800">
+    <g id="under" />
+    <g id="main-pentagon"><polygon id="pentagon" /></g>
+    <g id="over" />
+</svg>
+<p>Tiling (24) in Schattschneider&nbsp;1978.</p>
+<script type='text/javascript' src='d3.js' charset='utf-8'></script>
+<script type='text/javascript'>
+    function midpt(a, b) { return { x: (a.x+b.x)/2, y: (a.y+b.y)/2 }; }
+    function minus(a, b) { return { x: a.x-b.x, y: a.y-b.y }; }
+    function neg(a) { return { x: -a.x, y: -a.y }; }
+    function transl(v) { return "translate(" + (-v.x) + "," + (-v.y) + ")" }
+    function rot180(pt) { return transl(neg(pt)) + "scale(-1,-1)" + transl(pt); }
+    var svg = d3.select("svg");
+    var width = svg.attr("width");
+    var height = svg.attr("height");
+    var dotradius = 5;
+    function clip(lo, hi, x) { return Math.max(lo, Math.min(x, hi)); }
+
+    var p = { y1: 195
+            , y2: 290
+            , x: [430, 530, 500, 445, 400]
+            , t: 0.7
+            };
+    var pentagon;
+    var symms = {};
+    var fullsymms = [ [ "t1" ]
+                    , [ "t1n" ]
+                    , [ "r1" ]
+                    , [ "t1", "r1" ]
+                    , [ "t1n", "r1" ]
+                    , [ "r2" ]
+                    , [ "r2", "t1" ]
+                    , [ "r2", "t1", "t1" ]
+                    , [ "r2", "r1" ]
+                    , [ "r2", "t1", "r1" ]
+                    , [ "r2", "t1", "t1", "r1" ]
+                    ];
+
+    function update() {
+        pentagon = [ { x: p.x[0], y: p.y1 }
+                   , { x: p.x[1], y: p.y1 }
+                   , { x: p.x[2], y: p.y2 }
+                   , { x: p.x[3], y: p.y2 }
+                   , { x: p.x[4], y: (1-p.t)*p.y1 + p.t*p.y2 }
+                   ];
+        symms.t1 = transl(minus(pentagon[0], pentagon[3]));
+        symms.t1n = transl(neg(minus(pentagon[0], pentagon[3])));
+        symms.r1 = rot180(midpt(pentagon[1], pentagon[2]));
+        symms.r2 = rot180(midpt(pentagon[3], pentagon[4]));
+    }
+    function movept(i, x, y) {
+        var newx = clip(dotradius, width-dotradius, x);
+        var newy = clip(dotradius, height-dotradius, y);
+        p.x[i] = newx;
+        switch(i) {
+            case 0:
+            case 1:
+                p.y1 = newy;
+                break;
+            case 2:
+            case 3:
+                p.y2 = newy;
+                break;
+            case 4:
+                p.t = clip(0, 1, (newy - p.y1)/(p.y2 - p.y1))
+        }
+    }
+
+    var dragger = d3.behavior.drag()
+                    .origin(function (d) { return d; })
+                    .on("dragstart",
+                        function() {
+                            d3.event.sourceEvent.stopPropagation();
+                        })
+                    .on("drag", function (d,i) {
+                        movept(i, d3.event.x, d3.event.y);
+                        draw();
+                    });
+    function draw() {
+        update();
+
+        var g = svg.select("#under")
+                   .selectAll(".image")
+                   .data(fullsymms);
+        g.enter()
+         .append("g")
+         .classed("image", true)
+         .append("use")
+         .attr("xlink:href", "#pentagon");
+        g.attr("transform", function (d) {
+            return d.map(function (x) { return symms[x]; }).join("");
+        });
+
+        var rails = svg.select("#under")
+                       .selectAll(".rail")
+                       .data([p.y1, p.y2]);
+        rails.enter().append("line").classed("rail", true);
+        rails.attr("x1", 0)
+             .attr("x2", width)
+             .attr("y1", function (d) { return d; })
+             .attr("y2", function (d) { return d; });
+
+        var path = svg.selectAll("#pentagon")
+                      .data([pentagon])
+                      .attr("points",
+                          function (d) {
+                              return d.map(function (pt) { return pt.x + "," + pt.y; })
+                                      .join(" ");
+                          })
+
+        var dots = svg.select("#over").selectAll(".dot")
+                      .data(pentagon);
+        dots.enter()
+            .append("circle")
+            .attr("r", 5)
+            .classed("dot", true)
+            .call(dragger);
+        dots.attr("cx", function(d) { return d.x; })
+            .attr("cy", function(d) { return d.y; });
+    }
+    draw();
+</script>
+</body>
+</html>
