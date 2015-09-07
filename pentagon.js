@@ -31,6 +31,13 @@ function point(x,y) {
     this.angle = function() {
         return Math.atan2(this.y, this.x);
     }
+    this.foot = function(lin) {
+        return lin.perp(this).meet(lin);
+    }
+    this.reflin = function(lin) {
+        var p = this.foot(lin);
+        return p.mul(2).minus(this);
+    }
 }
 function line(a,b,c) {
     this.a = a;
